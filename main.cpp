@@ -113,16 +113,21 @@ void add(Node*& node, int value) {
     if (node == nullptr){
         node = new Node(value);
 	node->parent = nullptr;
-	node->color = 'b';
     }
     else if(node->left == nullptr && value < node->data){
         node->left = new Node(value);
 	node->left->parent = node;
+	if (case2(node->left) == true){
+	  
+	}
 	//cout << node->left->parent->data << endl;
     }
     else if(node->right == nullptr && value > node->data){
         node->right = new Node(value);
 	node->right->parent = node;
+	if (case2(node->right) == true){
+	  
+	}
 	//cout << node->right->parent->data << endl;
     }
     //if the number being taken in is less than the node we are looking at, look at the left child and call add again
@@ -134,8 +139,44 @@ void add(Node*& node, int value) {
         add(node->right, value);
     }
 }
-bool case2(Node* node){
-  if(node->parent->
+void case1(Node*& node){
+  if(node->parent == nullptr){
+    node->color = 'b';
+  }
+  else{
+    case2(node);
+  }
+}
+
+void case2(Node* node){
+  if(node->parent->color == 'b'){
+
+  }
+  else{
+    case3(node);
+  }
+}
+void case3(Node*& node){
+  if(node->parent->parent->right->color == 'r' && node->parent->parent->left->color == 'r'){
+    node->parent->parent->right->color = 'b';
+    node->parent->parent->left->color = 'b';
+    node->parent->parent->color = 'r';
+    case1(node->parent->parent);
+  }
+  else{
+    case4(node);
+  }
+}
+
+void case4(Node*& node){
+  if((node->parent->parent->left == node->parent) && (node->parent->right == node)){
+    Node* parent = node->parent;
+    Node* current = node;
+    node->parent->parent->left = node;
+    node->parent = node->parent->parent; 
+    node->left = parent;
+    
+  }
 }
 
 //this function is used to find the "next larger"
