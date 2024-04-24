@@ -8,10 +8,10 @@ using namespace std;
 
 //function prototypes
 void add(Node*& node, int value);
-//void remove(Node*& node, int value);
-//bool search(Node* node, int value);
+void remove(Node*& node, int value);
+bool search(Node* node, int value);
 void print(Node* node, int count);
-//Node* findMin(Node* node);
+Node* findMin(Node* node);
 
 int main() {
     //initialize variables
@@ -24,12 +24,12 @@ int main() {
     int value;
     int temp;
 
-    cout << "This is Red-Black Tree (Insertion)..." << endl;
+    cout << "This is Binary Search Tree..." << endl;
 
     //run while loop until "QUIT" is entered
     while(running == true){
       //ask for user input
-      cout << "Please enter a command: ADD, PRINT, or QUIT" << endl;
+      cout << "Please enter a command: ADD, DELETE, SEARCH, PRINT, or QUIT" << endl;
       //get a command from the user
       cin.get(command, 50);
       cin.get();
@@ -67,7 +67,6 @@ int main() {
 	  }
 	}
       }
-      /*
       //if DELETE
       else if(strcmp(command, "DELETE") == 0){
 	//user input
@@ -91,8 +90,6 @@ int main() {
 	  cout << "This value does not exist..." << endl;
 	}
       }
-      */
-      
       //if QUIT
       else if(strcmp(command, "QUIT") == 0){
 	//set running to false to end the while loop
@@ -112,26 +109,35 @@ int main() {
 void add(Node*& node, int value) {
     //if a null node is found, add a new node with the taken in value there
     //if we reach a null node, we know we have gone through the tree
+    
     if (node == nullptr){
         node = new Node(value);
+	node->parent = nullptr;
+	node->color = 'b';
+    }
+    else if(node->left == nullptr && value < node->data){
+        node->left = new Node(value);
+	node->left->parent = node;
+	//cout << node->left->parent->data << endl;
+    }
+    else if(node->right == nullptr && value > node->data){
+        node->right = new Node(value);
+	node->right->parent = node;
+	//cout << node->right->parent->data << endl;
     }
     //if the number being taken in is less than the node we are looking at, look at the left child and call add again
     else if (value < node->data){
-        if(node->left == nullptr){
-	    node->left->parent = node;
-        }
         add(node->left, value);
     }
     //if the number being taken in is greater than the node we are looking at, look at the right child and call add again
     else if (value > node->data){
-        if(node->right == nullptr){
-	    node->right->parent = node;
-        }
         add(node->right, value);
     }
 }
+bool case2(Node* node){
+  if(node->parent->
+}
 
-/*
 //this function is used to find the "next larger"
 //it iterates left until it reaches the leftmost child
 Node* findMin(Node* node) {
@@ -192,7 +198,6 @@ bool search(Node* node, int value) {
     else
         return search(node->right, value);
 }
-*/
 
 //print function provided in class
 //one thing to note is that if the tree is not balanced, it does not look good
@@ -210,7 +215,7 @@ void print(Node* node, int count) {
         cout << '\t';
     }
     //prints
-  cout << node->color << ": " << node->data << endl;
+  cout << node->data << ": " << node->color << endl;
 
   if(node->left != NULL){
         print(node->left, count + 1);
