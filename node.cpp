@@ -10,7 +10,7 @@ Node::Node(int val){
   left = nullptr;
   right = nullptr;
   parent = nullptr;
-  color = 'r';
+  color = 'r'; //nodes are inserted as red
 }
 
 //destructor
