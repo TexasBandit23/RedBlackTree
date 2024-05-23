@@ -1,8 +1,8 @@
 /*
 Author: Tejas Pandit
-Last Edited: 5/2/2024
+Last Edited: 5/22/2024
 This program creates a Red-Black tree, a self balancing binary tree
-The user can only insert numbers, print out the tree, and quit
+The user can insert and delete numbers, print out the tree, search for numbers in the tree, and quit
 */
 
 //imports
@@ -13,17 +13,22 @@ The user can only insert numbers, print out the tree, and quit
 #include <fstream>
 using namespace std;
 
-//function prototypes, commented out functions not used/needed
+//function prototypes
 void add(Node*& node, int value, Node*& root);
-//void remove(Node*& node, int value);
-//bool search(Node* node, int value);
+void remove(Node*& node, int value, Node*& root);
+bool search(Node* node, int value);
 void print(Node* node, int count, Node* root);
-//Node* findMin(Node* node);
+Node* findMin(Node* node);
 void case1(Node*& node, Node*& root);
 void case2(Node* node, Node*& root);
 void case3(Node*& node, Node*& root);
 void case4(Node*& node, Node*& root);
 void case5(Node*& node, Node*& root);
+void replaceNode(Node*& oldNode, Node*& newNode, Node*& root);
+void fixDoubleBlack(Node*& node, Node*& root);
+Node* getSibling(Node* node);
+bool isLeftChild(Node* node);
+bool hasRedChild(Node* node);
 
 int main() {
     //initialize variables
@@ -36,12 +41,12 @@ int main() {
     int value;
     int temp;
 
-    cout << "This is Binary Search Tree..." << endl;
+    cout << "This is Red-Black Tree..." << endl;
 
     //run while loop until "QUIT" is entered
     while(running == true){
       //ask for user input
-      cout << "Please enter a command: ADD, PRINT, or QUIT" << endl;
+      cout << "Please enter a command: ADD, DELETE, SEARCH, PRINT, or QUIT" << endl;
       //get a command from the user
       cin.get(command, 50);
       cin.get();
@@ -79,19 +84,17 @@ int main() {
 	  }
 	}
       }
-      /*
+      
       //if DELETE
-      //function not used
       else if(strcmp(command, "DELETE") == 0){
 	//user input
 	cout << "Which value would you like to delete?" << endl;
 	cin >> value;
 	cin.get();
 	//delete user inputted number
-	remove(root, value); //delete function call
+	remove(root, value, root); //delete function call
       }
       //if SEARCH
-      //function not used
       else if(strcmp(command, "SEARCH") == 0){
 	//user input
 	cout << "What value would you like to search for?" << endl;
@@ -105,7 +108,7 @@ int main() {
 	  cout << "This value does not exist..." << endl;
 	}
       }
-      */
+      
       //if QUIT
       else if(strcmp(command, "QUIT") == 0){
 	//set running to false to end the while loop
@@ -348,52 +351,208 @@ void case5(Node*& node, Node*& root){
     newParent4->color = 'b';
   }
 }
-/*
-//this function is used to find the "next larger"
 //it iterates left until it reaches the leftmost child
 Node* findMin(Node* node) {
     while (node->left != nullptr)
         node = node->left;
     return node;
 }
-
 //remove function
-void remove(Node*& node, int value) {
-    //if we have gone through the tree and the value has not been found, it does not exist and there is nothing to remove  
-    if (node == nullptr)
-        return;
-    //if the value is less than the value we are looking at, look to the left and call remove again
-    if (value < node->data)
-        remove(node->left, value);
-    //if the value is greater than the value we are looking at, look to the right and call remove again
-    else if (value > node->data)
-        remove(node->right, value);
-    //if this statement is reached, we have found the value we would like to remove
-    else {
-        //if the node has no children, simply remove
-        if (node->left == nullptr && node->right == nullptr) {
-            delete node;
-            node = nullptr;
-	//if the node has only a right child remove the node by setting its value to be that of the child     
-        } else if (node->left == nullptr) {
-            Node* temp = node;
-            node = node->right;
-            delete temp;
-	//if the node has only a left child remove the node by setting its value to be that of the child
-        } else if (node->right == nullptr) {
-            Node* temp = node;
-            node = node->left;
-            delete temp;
-	//this is the case of the node being removed has two children
-	} else {
-	    //use findMin to find the next larger - go one to the right then all the way to the left
-            Node* temp = findMin(node->right);
-            node->data = temp->data; //set the value of the node being removed to that of the next larger
-            remove(node->right, temp->data); //call remove again to remove the next larger node
+void remove(Node*& node, int value, Node*& root) {
+  if (node == nullptr){
+    return;
+  }
+    if (value < node->data) {
+      remove(node->left, value, root); //recursive call, we have not found the value we are looking for
+    } else if (value > node->data) {
+      remove(node->right, value, root); //recursive call, we have not found the value we are looking for
+    } else {
+      if (node->left == nullptr && node->right == nullptr) { //if the node we are looking to delete has no children
+	if (node == root) { //if the node we want to delete is the root, delete and we are done
+                delete node;
+                root = nullptr;
+            } else {
+	        //if the node is black and has no children, we have an issue to be fixed
+                if (node->color == 'b') {
+                    fixDoubleBlack(node, root);
+                }
+		//if this is reached, the node is red and can be deleted
+                if (isLeftChild(node)) {
+                    node->parent->left = nullptr;
+                } else { //node is red and can be deleted
+                    node->parent->right = nullptr;
+                }
+                delete node;
+            }
+	
+      } else if (node->left == nullptr || node->right == nullptr) { //if the node we are looking to delete has one child
+
+	//a condensed if statement I wanted to try out, if node->left exists, child is set to node->left
+	//if it does not exist, child is set to node->right
+	Node* child = (node->left != nullptr) ? node->left : node->right;
+	if (node == root) { //we are deleting the root and it has one child
+                node->data = child->data;
+                node->left = node->right = nullptr;
+                delete child;
+            } else { 
+                replaceNode(node, child, root);
+                if (node->color == 'b') {
+                    if (child->color == 'r') {
+                        child->color = 'b';
+                    } else {
+                        fixDoubleBlack(child, root);
+                    }
+                }
+                delete node;
+            }
+      } else { //the node we are deleting has two children
+            Node* successor = findMin(node->right);
+            node->data = successor->data;
+            remove(node->right, successor->data, root); //recursive call to remove the next larger
         }
     }
 }
 
+//replace an old node with a new node
+void replaceNode(Node*& oldNode, Node*& newNode, Node*& root) {
+  //check if oldNode is the root node
+  if (oldNode->parent == nullptr) {
+    root = newNode; //if it is the root, set the root to newNode
+    } else {
+    //if not the root, determine if it is a right or left child
+        if (isLeftChild(oldNode)) {
+	    //if it is a left child, set the left child of its parent to newNode 
+            oldNode->parent->left = newNode;
+        } else {
+	    //it is a right child so set the right child of its parent to newNode 
+            oldNode->parent->right = newNode;
+        }
+    }
+    //if newNode is not null, update its parent to the parent of oldNode 
+    if (newNode != nullptr) {
+        newNode->parent = oldNode->parent;
+    }
+}
+
+void fixDoubleBlack(Node*& node, Node*& root) {
+  //if the node is the root, there is no double black problem
+  if (node == root){
+    return;
+  }
+    //get sibling and parent of current node 
+    Node* sibling = getSibling(node);
+    Node* parent = node->parent;
+
+    // if the sibling is null, recursive call on the parent
+    if (sibling == nullptr) {
+        fixDoubleBlack(parent, root);
+    } else {
+        if (sibling->color == 'r') {
+	    //recolor
+	    parent->color = 'r';
+            sibling->color = 'b';
+
+	    //rotates based on the position of the sibling
+            if (isLeftChild(sibling)) {
+                // right rotate around the parent
+                Node* temp = sibling->right;
+                sibling->right = parent;
+                parent->left = temp;
+            } else {
+                // left rotate around the parent
+                Node* temp = sibling->left;
+                sibling->left = parent;
+                parent->right = temp;
+            }
+	    //update root if necessary
+            if (parent == root) {
+                root = sibling;
+            }
+
+	    //update connections
+            sibling->parent = parent->parent;
+            parent->parent = sibling;
+        } else {
+	    //if the sibling is black and has a red child
+            if (hasRedChild(sibling)) {
+	        //rotate and recolor based on position of sibling red child 
+                if (sibling->left != nullptr && sibling->left->color == 'r') {
+		  if (isLeftChild(sibling)) {
+		        //left sibling with left red child, right rotate
+                        sibling->left->color = sibling->color;
+                        sibling->color = parent->color;
+                        Node* temp = sibling->right;
+                        sibling->right = parent;
+                        parent->left = temp;
+                    } else {
+		        //right sibling with left red child
+                        sibling->left->color = parent->color;
+                        // right-left rotate
+                        Node* temp = sibling->left->right;
+                        sibling->left->right = sibling;
+                        sibling->left = temp;
+                        sibling = sibling->parent;
+                    }
+                } else {
+                    if (isLeftChild(sibling)) {
+		        //left sibling wirh right red child
+                        sibling->right->color = parent->color;
+                        // left-right rotate
+                        Node* temp = sibling->right->left;
+                        sibling->right->left = sibling;
+                        sibling->right = temp;
+                        sibling = sibling->parent;
+                    } else {
+		        //right sibling with right red child
+                        sibling->right->color = sibling->color;
+                        sibling->color = parent->color;
+                        // left rotate
+                        Node* temp = sibling->left;
+                        sibling->left = parent;
+                        parent->right = temp;
+                    }
+                }
+		//recolor parent and update root if needed
+                parent->color = 'b';
+                if (parent == root) {
+                    root = sibling;
+                }
+            } else {
+	        //if the sibling is black and has no red child, recolor the sibling
+                sibling->color = 'r';
+		//if the parent is black, fix double black for parent
+                if (parent->color == 'b') {
+                    fixDoubleBlack(parent, root);
+                } else { //recolor parent
+                    parent->color = 'b';
+                }
+            }
+        }
+    }
+}
+
+Node* getSibling(Node* node) {
+  //if the node has no parent, there is no sibling
+  if (node->parent == nullptr){
+    return nullptr;
+  }
+  //if the node is a left child, its parent's right child is the sibling
+  if (isLeftChild(node)){
+    return node->parent->right;
+  }
+    //the node is a right child, its sibling is its parent's left child
+  return node->parent->left;
+}
+
+bool isLeftChild(Node* node) {
+  return node == node->parent->left; //if the node is its parents left child, it is a left child
+}
+
+bool hasRedChild(Node* node) {
+    //if either child of the node is red, return true
+    return (node->left != nullptr && node->left->color == 'r') ||
+           (node->right != nullptr && node->right->color == 'r');
+}
 //search function
 bool search(Node* node, int value) {
     //if we go through the tree and the value is not found, it does not exist
@@ -409,7 +568,7 @@ bool search(Node* node, int value) {
     else
         return search(node->right, value);
 }
-*/
+
 
 //print function provided in class
 void print(Node* node, int count, Node* root) {
@@ -426,10 +585,10 @@ void print(Node* node, int count, Node* root) {
     }
     //prints
   if(node == root){
-    cout << node->data << ": " << node->color << ", Parent: N/A" << endl; //if the node is the root, it has no parent so, print out N/A
+    cout << node->data << ": " << node->color << endl; //if the node is the root, it has no parent so, print out N/A
   }
   else{
-    cout << node->data << ": " << node->color << ", Parent: " << node->parent->data << endl; //print out value, color, and parent
+    cout << node->data << ": " << node->color << endl; //print out value, color, and parent
   }
   
   if(node->left != NULL){
