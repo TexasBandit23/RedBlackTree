@@ -3,6 +3,8 @@ Author: Tejas Pandit
 Last Edited: 5/22/2024
 This program creates a Red-Black tree, a self balancing binary tree
 The user can insert and delete numbers, print out the tree, search for numbers in the tree, and quit
+Used a lot of resources like GeeksforGeeks, Wikipedia, YouTube and others to understand an RBT
+Credit to Taaha Khan and Jazveer Kaler for help with debugging
 */
 
 //imports
