@@ -15,7 +15,7 @@ using namespace std;
 
 //function prototypes
 void add(Node*& node, int value, Node*& root);
-void remove(Node*& node, int value);
+void remove(Node*& node, int value, Node*& root);
 bool search(Node* node, int value);
 void print(Node* node, int count, Node* root);
 Node* findMin(Node* node);
@@ -24,12 +24,14 @@ void case2(Node* node, Node*& root);
 void case3(Node*& node, Node*& root);
 void case4(Node*& node, Node*& root);
 void case5(Node*& node, Node*& root);
+//old prototype that didn't work
 //void replaceNode(Node*& oldNode, Node*& newNode, Node*& root);
 void fixDoubleBlack(Node*& root, Node* node);
 Node* getSibling(Node* node);
 bool isLeftChild(Node* node);
 bool hasRedChild(Node* node);
-void fixDelete(Node*& root, Node*& node);
+//old prototype that didn't work
+//void fixDelete(Node*& root, Node*& node);
 void rotateLeft(Node*& root, Node*& node);
 void rotateRight(Node*& root, Node*& node);
 
@@ -95,7 +97,7 @@ int main() {
 	cin >> value;
 	cin.get();
 	//delete user inputted number
-	remove(root, value); //delete function call
+	remove(root, value, root); //delete function call
       }
       //if SEARCH
       else if(strcmp(command, "SEARCH") == 0){
@@ -354,63 +356,73 @@ void case5(Node*& node, Node*& root){
     newParent4->color = 'b';
   }
 }
-//it iterates left until it reaches the leftmost child
+//iterates left until it reaches the leftmost child
 Node* findMin(Node* node) {
     while (node->left != nullptr)
         node = node->left;
     return node;
 }
-void remove(Node*& root, int value) {
+
+//remove function
+void remove(Node*& root, int value, Node*& rootRef) {
     Node* nodeToDelete = root;
     Node* nodeToReplace;
-    Node* child;
-    
-    // Find the node to be deleted
+
+    //find the node to delete
     while (nodeToDelete != nullptr && nodeToDelete->data != value) {
-        if (value < nodeToDelete->data)
+        if (value < nodeToDelete->data) {
             nodeToDelete = nodeToDelete->left;
-        else
+        } else {
             nodeToDelete = nodeToDelete->right;
+        }
     }
-    
+
     if (nodeToDelete == nullptr) {
-        return; // Node not found
+        return; //node not found
     }
-    
-    // If the node has two children, find the in-order successor
+
+    //if node has two children, we need the in-order successor
     if (nodeToDelete->left != nullptr && nodeToDelete->right != nullptr) {
-        Node* successor = findMin(nodeToDelete->right);
-        nodeToDelete->data = successor->data;
-        nodeToDelete = successor;
+        Node* successor = findMin(nodeToDelete->right); //smallest value in right tree
+        nodeToDelete->data = successor->data; //replace data with successor data
+        nodeToDelete = successor; //we now need to delete the successor
     }
-    
-    // Now the nodeToDelete has at most one child
+
+    //determine what will repalce the node to be deleted
     nodeToReplace = (nodeToDelete->left != nullptr) ? nodeToDelete->left : nodeToDelete->right;
-    
+
+    //if the node to be deleted has a child
     if (nodeToReplace != nullptr) {
         nodeToReplace->parent = nodeToDelete->parent;
-        
-        if (nodeToDelete->parent == nullptr) {
-            root = nodeToReplace;
+	//node is root
+	if (nodeToDelete->parent == nullptr) {
+            rootRef = nodeToReplace;
+	    //node is left child
         } else if (nodeToDelete == nodeToDelete->parent->left) {
             nodeToDelete->parent->left = nodeToReplace;
-        } else {
+	    //node is right child
+	} else {
             nodeToDelete->parent->right = nodeToReplace;
         }
-        
+
+	//fix double black issue
         if (nodeToDelete->color == 'b') {
-            fixDelete(root, nodeToReplace);
+            fixDoubleBlack(rootRef, nodeToReplace);
         }
-        
+	//delete node
         delete nodeToDelete;
-    } else if (nodeToDelete->parent == nullptr) { // Node is the root
-        root = nullptr;
+
+	//node is root and has no children
+    } else if (nodeToDelete->parent == nullptr) {
+        rootRef = nullptr;
         delete nodeToDelete;
-    } else { // Node is a leaf
+	//node to delete is a leaf
+    } else {
+        //if the leaf is black, issue
         if (nodeToDelete->color == 'b') {
-            fixDelete(root, nodeToDelete);
+            fixDoubleBlack(rootRef, nodeToDelete);
         }
-        
+	//update parent
         if (nodeToDelete->parent != nullptr) {
             if (nodeToDelete == nodeToDelete->parent->left) {
                 nodeToDelete->parent->left = nullptr;
@@ -418,90 +430,72 @@ void remove(Node*& root, int value) {
                 nodeToDelete->parent->right = nullptr;
             }
         }
-        
+	//delete
         delete nodeToDelete;
     }
 }
 
-void fixDelete(Node*& root, Node*& node) {
-    if (node == nullptr) return;
-    
+void fixDoubleBlack(Node*& root, Node* node) {
+    //node is root, nothing to be done
     if (node == root) {
-        root = nullptr;
         return;
     }
-    
-    if (node->color == 'r' || (node->left != nullptr && node->left->color == 'r') || 
-        (node->right != nullptr && node->right->color == 'r')) {
-        Node* child = node->left != nullptr ? node->left : node->right;
-        
-        if (node == node->parent->left) {
-            node->parent->left = child;
-            if (child != nullptr) {
-                child->parent = node->parent;
-            }
-            child->color = 'b';
-        } else {
-            node->parent->right = child;
-            if (child != nullptr) {
-                child->parent = node->parent;
-            }
-            child->color = 'b';
-        }
-        
-        delete node;
-    } else {
-        fixDoubleBlack(root, node);
-        delete node;
-    }
-}
 
-void fixDoubleBlack(Node*& root, Node* node) {
-    if (node == root) return;
-    
+    //get sibling and parent
     Node* sibling = getSibling(node);
     Node* parent = node->parent;
-    
+
+    //if sibling is null, fix issue at parent level
     if (sibling == nullptr) {
         fixDoubleBlack(root, parent);
     } else {
+        //if sibling is red
         if (sibling->color == 'r') {
-            parent->color = 'r';
-            sibling->color = 'b';
-            if (sibling == parent->left) {
+	  parent->color = 'r'; //color parent red
+	  sibling->color = 'b'; //color sibling black
+	    //rotations
+	    if (isLeftChild(sibling)) {
                 rotateRight(root, parent);
             } else {
                 rotateLeft(root, parent);
             }
+	    //fix issue at original node
             fixDoubleBlack(root, node);
+	//sibling is black but has a red child
         } else {
-            if ((sibling->left != nullptr && sibling->left->color == 'r') || 
-                (sibling->right != nullptr && sibling->right->color == 'r')) {
-                
+            if (hasRedChild(sibling)) {
+	        //determine which sibling is red
                 if (sibling->left != nullptr && sibling->left->color == 'r') {
-                    if (sibling == parent->left) {
+		  //sibling is left child and its left child is red
+		    if (isLeftChild(sibling)) {
                         sibling->left->color = sibling->color;
                         sibling->color = parent->color;
                         rotateRight(root, parent);
-                    } else {
+		    //sibling is right child and its left child is red
+		    } else {
                         sibling->left->color = parent->color;
                         rotateRight(root, sibling);
                         rotateLeft(root, parent);
                     }
                 } else {
-                    if (sibling == parent->left) {
+		    //sibling is left child and its right child is red
+                    if (isLeftChild(sibling)) {
                         sibling->right->color = parent->color;
                         rotateLeft(root, sibling);
                         rotateRight(root, parent);
                     } else {
+		      //sibling is right child and its right child is red
                         sibling->right->color = sibling->color;
                         sibling->color = parent->color;
                         rotateLeft(root, parent);
                     }
                 }
+		//color parent
                 parent->color = 'b';
             } else {
+	      //sibling is black and has no children
                 sibling->color = 'r';
+		//if parent is also black, fix issue at parent
                 if (parent->color == 'b') {
                     fixDoubleBlack(root, parent);
                 } else {
@@ -512,62 +506,72 @@ void fixDoubleBlack(Node*& root, Node* node) {
     }
 }
 
-
 Node* getSibling(Node* node) {
+    //if the node has no parent, it has no sibling
     if (node->parent == nullptr) {
         return nullptr;
     }
-
-    if (node == node->parent->left) {
+    //if the node is a left child, the parent's right child is the sibling
+    if (isLeftChild(node)) {
         return node->parent->right;
     } else {
+      //the node is a right child so, the sibling is the parent's left child
         return node->parent->left;
     }
 }
 
+//if the node is the left child of its parent, returns true
 bool isLeftChild(Node* node) {
     return node == node->parent->left;
 }
 
+//if either child is red, return true
 bool hasRedChild(Node* node) {
-    return (node->left != nullptr && node->left->color == 'r') ||
-           (node->right != nullptr && node->right->color == 'r');
+    return (node->left != nullptr && node->left->color == 'r') || (node->right != nullptr && node->right->color == 'r');
 }
 
+//performs a rotation left
 void rotateLeft(Node*& root, Node*& node) {
-    Node* rightChild = node->right;
-    node->right = rightChild->left;
-    if (node->right != nullptr) {
-        node->right->parent = node;
+    Node* newParent = node->right;
+    if (node == root) {
+        root = newParent;
     }
-    rightChild->parent = node->parent;
-    if (node->parent == nullptr) {
-        root = rightChild;
-    } else if (node == node->parent->left) {
-        node->parent->left = rightChild;
-    } else {
-        node->parent->right = rightChild;
+    node->moveDown(newParent);
+    node->right = newParent->left;
+    if (newParent->left != nullptr) {
+        newParent->left->parent = node;
     }
-    rightChild->left = node;
-    node->parent = rightChild;
+    newParent->left = node;
 }
 
+//performs a rotation right
 void rotateRight(Node*& root, Node*& node) {
-    Node* leftChild = node->left;
-    node->left = leftChild->right;
-    if (node->left != nullptr) {
-        node->left->parent = node;
+    Node* newParent = node->left;
+    if (node == root) {
+        root = newParent;
     }
-    leftChild->parent = node->parent;
-    if (node->parent == nullptr) {
-        root = leftChild;
-    } else if (node == node->parent->left) {
-        node->parent->left = leftChild;
-    } else {
-        node->parent->right = leftChild;
+    node->moveDown(newParent);
+    node->left = newParent->right;
+    if (newParent->right != nullptr) {
+        newParent->right->parent = node;
     }
-    leftChild->right = node;
-    node->parent = leftChild;
+    newParent->right = node;
+}
+
+void Node::moveDown(Node* newParent) {
+    //check if current node has a parent
+    if (parent != nullptr) {
+      //if the node is left child, update "left" of parent 
+        if (isLeftChild(this)) {
+            parent->left = newParent;
+        } else {
+	  //node is right right child so update "right" of parent
+            parent->right = newParent;
+        }
+    }
+    //update
+    newParent->parent = parent;
+    parent = newParent;
 }
 
 //search function

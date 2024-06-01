@@ -14,6 +14,8 @@ public:
     Node* parent;
     char color; 
     //constructor and destructor 
+    void moveDown(Node* newParent);
+    //bool isLeftChild();
     Node(int val);
     ~Node();
     //no prototypes needed as no methods used in node.cpp
